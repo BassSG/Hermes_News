@@ -17,7 +17,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'data' / 'news.json'
-UA = 'HermesNewsBot/1.0 (+https://github.com/BassSG/Hermes_News)'
+UA = 'Mozilla/5.0 (compatible; HermesNewsBot/1.0; +https://github.com/BassSG/Hermes_News)'
+IMAGE_CACHE = {}
+GOOGLE_NEWS_LOGO_MARKERS = ('-DR60l-K8vnyi99NZovm9HlXyZwQ85GMDxiwJWzoasZYCUrPuUM_P_4Rb7ei03j', 'gnews/logo')
 
 TOPICS = [
     ('Top Thailand', 'https://news.google.com/rss?hl=th&gl=TH&ceid=TH:th', 'thailand'),
@@ -37,6 +39,7 @@ CATEGORY_KEYWORDS = {
 }
 BREAKING_WORDS = ['ด่วน','ล่าสุด','ช็อก','ใหญ่','จับตา','วิกฤต','เตือน','ประกาศ','เสียชีวิต','ถล่ม','ฉุกเฉิน']
 TH_WORDS = ['ไทย','กทม','กรุงเทพ','จังหวัด','รัฐบาล','ตำรวจ','สภา','นายก','เงินบาท','หุ้นไทย']
+SPAM_WORDS = ['คาสิโน', 'สล็อต', 'บาคาร่า', 'เว็บพนัน', 'เปิดบัญชีฟรี', 'สนุกได้ทุกวัน']
 
 def fetch(url: str) -> bytes:
     req = urllib.request.Request(url, headers={'User-Agent': UA})
@@ -47,6 +50,72 @@ def clean(text: str) -> str:
     text = html.unescape(re.sub(r'<[^>]+>', ' ', text or ''))
     text = re.sub(r'\s+', ' ', text).strip()
     return text
+
+def normalize_google_image(url: str) -> str:
+    """Prefer a larger Google News thumbnail while preserving the same image id."""
+    if not url:
+        return ''
+    url = html.unescape(url).replace('\\u003d', '=').replace('\\u0026', '&')
+    if url.startswith('/api/attachments/'):
+        url = 'https://news.google.com' + url
+    url = re.sub(r'-w\d+-h\d+-p-df(?:\s.*)?$', '-w720-h405-p-df', url)
+    url = re.sub(r'=s0-w\d+.*$', '=s0-w720', url)
+    url = re.sub(r'=w\d+.*$', '=w720', url)
+    if '=s0-w' not in url and '=w' not in url and 'googleusercontent.com' in url:
+        url = url.rstrip('/') + '=s0-w720'
+    return url
+
+def candidate_images_from_html(page: str) -> list[str]:
+    body_start = page.find('<body')
+    body = page[body_start:] if body_start >= 0 else page
+    patterns = [
+        r'/api/attachments/[^"\\<>\s,]+',
+        r'https://lh3\.googleusercontent\.com/[^"\\<>\s]+',
+        r'https://[^"\\<>\s]+?(?:\.jpg|\.jpeg|\.png|\.webp)(?:\?[^"\\<>\s]*)?',
+    ]
+    found = []
+    for pattern in patterns:
+        for match in re.findall(pattern, body, flags=re.I):
+            url = normalize_google_image(match if isinstance(match, str) else match[0])
+            if not url.startswith('http'):
+                continue
+            if any(marker in url for marker in GOOGLE_NEWS_LOGO_MARKERS):
+                continue
+            if url not in found:
+                found.append(url)
+    # Prefer story attachment thumbnails, then larger article thumbnails, then icons.
+    return sorted(found, key=lambda u: (
+        'news.google.com/api/attachments' not in u,
+        ('=rj-' in u) or ('-h300-l95' in u) or ('=s56' in u),
+        'googleusercontent.com' not in u,
+    ))
+
+def google_news_thumbnail(title: str, source: str = '') -> str:
+    """Find the actual thumbnail Google News shows for this story.
+
+    Google News RSS does not expose media:content, but the public search result
+    page includes lh3.googleusercontent.com thumbnails. We query by title+source
+    and keep the first non-logo news image. If the lookup fails, the app falls
+    back to its generated visual gradient.
+    """
+    key = re.sub(r'\W+', ' ', f'{title} {source}'.lower()).strip()[:120]
+    if key in IMAGE_CACHE:
+        return IMAGE_CACHE[key]
+    query = urllib.parse.quote(f'{title} {source}'.strip())
+    url = f'https://news.google.com/search?q={query}&hl=th&gl=TH&ceid=TH:th'
+    try:
+        page = fetch(url).decode('utf-8', 'ignore')
+        images = candidate_images_from_html(page)
+        IMAGE_CACHE[key] = images[0] if images else ''
+    except Exception:
+        IMAGE_CACHE[key] = ''
+    return IMAGE_CACHE[key]
+
+def enrich_story_images(stories: list[dict]) -> None:
+    for story in stories:
+        image = google_news_thumbnail(story.get('title', ''), story.get('source', ''))
+        story['image_url'] = image
+        story['image_source'] = 'Google News thumbnail' if image else ''
 
 def parse_date(value: str) -> str:
     if not value:
@@ -107,6 +176,8 @@ def parse_feed(name: str, url: str, topic: str):
         source_el = item.find('source')
         source = clean(source_el.text if source_el is not None else name)
         text = f'{title} {desc}'
+        if any(word.lower() in text.lower() for word in SPAM_WORDS):
+            continue
         cat = category_for(text, topic)
         story_id = hashlib.sha1((re.sub(r'\W+', '', title.lower())[:80] + source).encode('utf-8')).hexdigest()[:12]
         summary = desc
@@ -145,16 +216,19 @@ def build():
         if key not in seen or s['score'] > seen[key]['score']:
             seen[key] = s
     final = sorted(seen.values(), key=lambda s: (s['score'], s['published_at']), reverse=True)[:36]
+    enrich_story_images(final)
+    image_count = sum(1 for story in final if story.get('image_url'))
     payload = {
         'generated_at': dt.datetime.now(dt.timezone.utc).isoformat(),
         'is_live': bool(final),
+        'image_count': image_count,
         'sources': [{'name': name, 'topic': topic, 'url': url} for name, url, topic in TOPICS],
         'errors': errors,
         'stories': final,
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding='utf-8')
-    print(f'Wrote {OUT} with {len(final)} stories ({len(errors)} feed errors)')
+    print(f'Wrote {OUT} with {len(final)} stories, {image_count} images ({len(errors)} feed errors)')
     if errors:
         print(json.dumps(errors, ensure_ascii=False, indent=2), file=sys.stderr)
 
