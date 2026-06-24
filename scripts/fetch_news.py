@@ -17,6 +17,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'data' / 'news.json'
+IMAGE_DIR = ROOT / 'assets' / 'news-images'
 UA = 'Mozilla/5.0 (compatible; HermesNewsBot/1.0; +https://github.com/BassSG/Hermes_News)'
 IMAGE_CACHE = {}
 GOOGLE_NEWS_LOGO_MARKERS = ('-DR60l-K8vnyi99NZovm9HlXyZwQ85GMDxiwJWzoasZYCUrPuUM_P_4Rb7ei03j', 'gnews/logo')
@@ -112,10 +113,36 @@ def google_news_thumbnail(title: str, source: str = '') -> str:
     return IMAGE_CACHE[key]
 
 def enrich_story_images(stories: list[dict]) -> None:
+    IMAGE_DIR.mkdir(parents=True, exist_ok=True)
+    for old in IMAGE_DIR.glob('*.jpg'):
+        try:
+            old.unlink()
+        except OSError:
+            pass
     for story in stories:
-        image = google_news_thumbnail(story.get('title', ''), story.get('source', ''))
-        story['image_url'] = image
-        story['image_source'] = 'Google News thumbnail' if image else ''
+        external_image = google_news_thumbnail(story.get('title', ''), story.get('source', ''))
+        local_image = cache_story_image(story.get('id', ''), external_image)
+        story['image_url'] = local_image
+        story['external_image_url'] = external_image
+        story['image_source'] = 'Google News thumbnail cached locally' if local_image else ''
+
+def cache_story_image(story_id: str, image_url: str) -> str:
+    if not story_id or not image_url:
+        return ''
+    try:
+        req = urllib.request.Request(image_url, headers={'User-Agent': UA, 'Referer': 'https://news.google.com/'})
+        with urllib.request.urlopen(req, timeout=30) as response:
+            content_type = response.headers.get('content-type', '')
+            if not content_type.startswith('image/'):
+                return ''
+            data = response.read(900_000)
+            if len(data) < 1024:
+                return ''
+        filename = f'{story_id}.jpg'
+        (IMAGE_DIR / filename).write_bytes(data)
+        return f'assets/news-images/{filename}'
+    except Exception:
+        return ''
 
 def parse_date(value: str) -> str:
     if not value:
