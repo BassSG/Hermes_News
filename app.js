@@ -1,4 +1,4 @@
-const state = { data: null, filter: 'all', search: '', deferredInstall: null };
+const state = { data: null, filter: 'all', search: '', deferredInstall: null, currentStory: null };
 const palette = {
   politics: ['#ff5d73', '#7c2dff'], business: ['#ffc857', '#1f9d8a'], world: ['#5aa8ff', '#9c7cff'],
   tech: ['#39d8ff', '#2364ff'], culture: ['#ff8bd1', '#7c2dff'], thailand: ['#53e3a6', '#39d8ff'], breaking: ['#ff5d73', '#ffc857'], default: ['#5aa8ff', '#9c7cff']
@@ -43,7 +43,7 @@ function card(story, lead=false) {
     <p>${escapeHtml(story.summary || story.description || 'อ่านรายละเอียดเพิ่มเติมจากแหล่งข่าวต้นทาง')}</p>
     <div class="card-footer">
       <span>${escapeHtml(story.source || 'Google News')} • ${timeAgo(story.published_at)}</span>
-      <span class="open-link">เปิดอ่าน →</span>
+      <span class="open-link">ดูสรุป + แหล่งข่าว ⟶</span>
     </div>`;
   el.addEventListener('click', () => openStory(story.id));
   el.addEventListener('keydown', (e) => { if (e.key === 'Enter') openStory(story.id); });
@@ -100,8 +100,29 @@ function openStory(id) {
   $('dialogTitle').textContent = story.title;
   $('dialogSummary').textContent = story.summary || story.description || 'อ่านรายละเอียดเพิ่มเติมจากแหล่งข่าวต้นทาง';
   $('dialogWhy').textContent = story.why_it_matters || inferWhy(story);
-  $('sourceLink').href = story.link;
+  state.currentStory = story;
   $('storyDialog').showModal();
+}
+function openSourceReader() {
+  const story = state.currentStory;
+  if (!story?.link) return;
+  $('sourceDialogTitle').textContent = story.source || 'แหล่งข่าวต้นทาง';
+  $('sourceDialogMeta').textContent = `${story.title} • เปิดแบบ popup ในแอป ไม่พาออกจากหน้า Hermes News`;
+  $('sourceFrame').src = story.link;
+  if ($('storyDialog').open) $('storyDialog').close();
+  $('sourceDialog').showModal();
+}
+function closeSourceReader() {
+  $('sourceDialog').close();
+  $('sourceFrame').src = 'about:blank';
+}
+async function copyCurrentSource(button) {
+  const story = state.currentStory;
+  if (!story?.link) return;
+  await navigator.clipboard.writeText(story.link);
+  const old = button.textContent;
+  button.textContent = 'คัดลอกแล้ว';
+  setTimeout(() => button.textContent = old, 1400);
 }
 function inferWhy(story) {
   if (story.category === 'politics') return 'ประเด็นนี้อาจกระทบการตัดสินใจเชิงนโยบาย กฎหมาย หรือบรรยากาศสังคมในไทย';
@@ -124,7 +145,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   $('searchInput').addEventListener('input', (e) => { state.search = e.target.value; render(); });
   $('refreshBtn').addEventListener('click', () => loadData());
   $('closeDialog').addEventListener('click', () => $('storyDialog').close());
-  $('copyLinkBtn').addEventListener('click', async () => { await navigator.clipboard.writeText($('sourceLink').href); $('copyLinkBtn').textContent='คัดลอกแล้ว'; setTimeout(()=>$('copyLinkBtn').textContent='คัดลอกลิงก์', 1400); });
+  $('storyDialog').addEventListener('click', (e) => { if (e.target === $('storyDialog')) $('storyDialog').close(); });
+  $('sourcePopupBtn').addEventListener('click', openSourceReader);
+  $('closeSourceDialog').addEventListener('click', closeSourceReader);
+  $('sourceDialog').addEventListener('click', (e) => { if (e.target === $('sourceDialog')) closeSourceReader(); });
+  $('backToSummaryBtn').addEventListener('click', () => { closeSourceReader(); if (state.currentStory) openStory(state.currentStory.id); });
+  $('copyLinkBtn').addEventListener('click', () => copyCurrentSource($('copyLinkBtn')));
+  $('copySourceBtn').addEventListener('click', () => copyCurrentSource($('copySourceBtn')));
   window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); state.deferredInstall = e; $('installBtn').hidden = false; });
   $('installBtn').addEventListener('click', async () => { if (state.deferredInstall) { state.deferredInstall.prompt(); state.deferredInstall = null; $('installBtn').hidden = true; } });
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(console.warn);

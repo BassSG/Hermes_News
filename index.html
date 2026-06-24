@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="https://basssg.github.io/Hermes_News/icon-192.png" sizes="192x192" type="image/png" />
   <link rel="apple-touch-icon" href="https://basssg.github.io/Hermes_News/icon-192.png" />
-  <link rel="stylesheet" href="styles.css?v=20260624-readable-cards" />
+  <link rel="stylesheet" href="styles.css?v=20260624-source-popup" />
 </head>
 <body>
   <div class="ambient ambient-a"></div>
@@ -95,9 +95,33 @@
           <p id="dialogWhy"></p>
         </div>
         <div class="dialog-actions">
-          <a id="sourceLink" class="primary-btn" target="_blank" rel="noopener noreferrer">เปิดแหล่งข่าว</a>
+          <button id="sourcePopupBtn" class="primary-btn">อ่านจากแหล่งข่าวในแอป</button>
           <button id="copyLinkBtn" class="ghost-btn">คัดลอกลิงก์</button>
         </div>
+      </div>
+    </article>
+  </dialog>
+
+  <dialog id="sourceDialog" class="source-dialog">
+    <article class="source-card">
+      <div class="source-toolbar">
+        <div>
+          <p class="eyebrow">In-app Source Reader</p>
+          <h2 id="sourceDialogTitle">แหล่งข่าวต้นทาง</h2>
+          <p id="sourceDialogMeta" class="source-meta-line"></p>
+        </div>
+        <button id="closeSourceDialog" class="close-btn source-close" aria-label="ปิด">×</button>
+      </div>
+      <div class="source-frame-wrap">
+        <iframe id="sourceFrame" title="อ่านแหล่งข่าวในแอป" loading="lazy" referrerpolicy="no-referrer"></iframe>
+        <div class="source-frame-note">
+          <strong>ยังอยู่ใน Hermes News</strong>
+          <span>บางสำนักข่าวอาจบล็อกการแสดงผลแบบฝัง ถ้าไม่ขึ้น ให้ใช้ปุ่มคัดลอกลิงก์แทน</span>
+        </div>
+      </div>
+      <div class="source-actions">
+        <button id="copySourceBtn" class="ghost-btn">คัดลอกลิงก์ข่าว</button>
+        <button id="backToSummaryBtn" class="primary-btn">กลับไปสรุปข่าว</button>
       </div>
     </article>
   </dialog>
@@ -107,6 +131,6 @@
     <span>Built for morning decisions, not doom-scrolling.</span>
   </footer>
 
-  <script src="app.js?v=20260624-readable-cards" defer></script>
+  <script src="app.js?v=20260624-source-popup" defer></script>
 </body>
 </html>

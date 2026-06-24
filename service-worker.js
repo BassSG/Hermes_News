@@ -1,4 +1,4 @@
-const CACHE = 'hermes-news-v2-images';
+const CACHE = 'hermes-news-v3-source-popup';
 const ASSETS = ['.', 'index.html', 'manifest.json', 'logo.svg', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', event => {
