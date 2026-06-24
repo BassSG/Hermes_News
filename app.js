@@ -43,7 +43,7 @@ function card(story, lead=false) {
     <p>${escapeHtml(story.summary || story.description || 'อ่านรายละเอียดเพิ่มเติมจากแหล่งข่าวต้นทาง')}</p>
     <div class="card-footer">
       <span>${escapeHtml(story.source || 'Google News')} • ${timeAgo(story.published_at)}</span>
-      <span class="open-link">ดูสรุป + แหล่งข่าว ⟶</span>
+      <span class="open-link">เปิดอ่าน →</span>
     </div>`;
   el.addEventListener('click', () => openStory(story.id));
   el.addEventListener('keydown', (e) => { if (e.key === 'Enter') openStory(story.id); });
@@ -101,25 +101,13 @@ function openStory(id) {
   $('dialogSummary').textContent = story.summary || story.description || 'อ่านรายละเอียดเพิ่มเติมจากแหล่งข่าวต้นทาง';
   $('dialogWhy').textContent = story.why_it_matters || inferWhy(story);
   state.currentStory = story;
+  $('sourceLink').href = story.link;
   $('storyDialog').showModal();
 }
-function openSourceReader() {
-  const story = state.currentStory;
-  if (!story?.link) return;
-  $('sourceDialogTitle').textContent = story.source || 'แหล่งข่าวต้นทาง';
-  $('sourceDialogMeta').textContent = `${story.title} • เปิดแบบ popup ในแอป ไม่พาออกจากหน้า Hermes News`;
-  $('sourceFrame').src = story.link;
-  if ($('storyDialog').open) $('storyDialog').close();
-  $('sourceDialog').showModal();
-}
-function closeSourceReader() {
-  $('sourceDialog').close();
-  $('sourceFrame').src = 'about:blank';
-}
 async function copyCurrentSource(button) {
-  const story = state.currentStory;
-  if (!story?.link) return;
-  await navigator.clipboard.writeText(story.link);
+  const href = $('sourceLink').href;
+  if (!href) return;
+  await navigator.clipboard.writeText(href);
   const old = button.textContent;
   button.textContent = 'คัดลอกแล้ว';
   setTimeout(() => button.textContent = old, 1400);
@@ -146,12 +134,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   $('refreshBtn').addEventListener('click', () => loadData());
   $('closeDialog').addEventListener('click', () => $('storyDialog').close());
   $('storyDialog').addEventListener('click', (e) => { if (e.target === $('storyDialog')) $('storyDialog').close(); });
-  $('sourcePopupBtn').addEventListener('click', openSourceReader);
-  $('closeSourceDialog').addEventListener('click', closeSourceReader);
-  $('sourceDialog').addEventListener('click', (e) => { if (e.target === $('sourceDialog')) closeSourceReader(); });
-  $('backToSummaryBtn').addEventListener('click', () => { closeSourceReader(); if (state.currentStory) openStory(state.currentStory.id); });
   $('copyLinkBtn').addEventListener('click', () => copyCurrentSource($('copyLinkBtn')));
-  $('copySourceBtn').addEventListener('click', () => copyCurrentSource($('copySourceBtn')));
   window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); state.deferredInstall = e; $('installBtn').hidden = false; });
   $('installBtn').addEventListener('click', async () => { if (state.deferredInstall) { state.deferredInstall.prompt(); state.deferredInstall = null; $('installBtn').hidden = true; } });
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(console.warn);
