@@ -27,12 +27,14 @@ function timeAgo(iso) {
 }
 function card(story, lead=false) {
   const el = document.createElement('article');
-  el.className = 'news-card';
+  el.className = `news-card${story.image_url ? ' has-image' : ''}`;
   el.style.setProperty('--visual', visualFor(story));
   el.tabIndex = 0;
   el.setAttribute('role', 'button');
   el.setAttribute('aria-label', `เปิดรายละเอียด ${story.title}`);
+  const imageHtml = story.image_url ? `<img class="card-image" src="${escapeAttr(story.image_url)}" alt="ภาพข่าว: ${escapeAttr(story.title)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.news-card').classList.remove('has-image'); this.remove();">` : '';
   el.innerHTML = `
+    ${imageHtml}
     <div class="card-topline">
       <span class="pill">${story.is_breaking ? 'ด่วน/ดัง' : categoryLabel(story.category)}</span>
       <span class="pill score-pill">Impact ${story.score}</span>
@@ -48,6 +50,7 @@ function card(story, lead=false) {
   return el;
 }
 function escapeHtml(str='') { return String(str).replace(/[&<>'"]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[s])); }
+function escapeAttr(str='') { return escapeHtml(str).replace(/`/g, '&#96;'); }
 function filteredStories() {
   const q = state.search.trim().toLowerCase();
   return (state.data?.stories || []).filter(s => {
@@ -89,7 +92,10 @@ function openStory(id) {
   const story = state.data.stories.find(s => s.id === id);
   if (!story) return;
   location.hash = `story-${id}`;
-  $('dialogVisual').style.setProperty('--visual', visualFor(story));
+  const dialogVisual = $('dialogVisual');
+  dialogVisual.className = `dialog-visual${story.image_url ? ' has-image' : ''}`;
+  dialogVisual.style.setProperty('--visual', visualFor(story));
+  dialogVisual.innerHTML = story.image_url ? `<img src="${escapeAttr(story.image_url)}" alt="ภาพข่าว: ${escapeAttr(story.title)}" referrerpolicy="no-referrer" onerror="this.parentElement.classList.remove('has-image'); this.remove();">` : '';
   $('dialogMeta').innerHTML = `<span class="pill">${categoryLabel(story.category)}</span><span class="pill">${escapeHtml(story.source || '')}</span><span class="pill score-pill">Impact ${story.score}</span><span class="pill">${timeAgo(story.published_at)}</span>`;
   $('dialogTitle').textContent = story.title;
   $('dialogSummary').textContent = story.summary || story.description || 'อ่านรายละเอียดเพิ่มเติมจากแหล่งข่าวต้นทาง';
@@ -124,3 +130,4 @@ document.addEventListener('DOMContentLoaded', async () => {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(console.warn);
   try { await loadData(); } catch (err) { $('briefMeta').textContent = `โหลดข้อมูลไม่ได้: ${err.message}`; }
 });
+
