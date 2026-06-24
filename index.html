@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Hermes News — Morning Command Center</title>
+  <meta name="description" content="ข่าวด่วนข่าวดังประเทศไทยและต่างประเทศ แบบ Dark Mode อ่านง่าย ติดตั้งบนมือถือได้" />
+  <meta name="theme-color" content="#06101f" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="https://basssg.github.io/Hermes_News/icon-192.png" sizes="192x192" type="image/png" />
+  <link rel="apple-touch-icon" href="https://basssg.github.io/Hermes_News/icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+
+  <header class="app-header">
+    <a class="brand" href="#home" aria-label="Hermes News Home">
+      <img src="logo.svg" alt="Hermes News" class="brand-logo" />
+      <span>
+        <strong>Hermes News</strong>
+        <small>Morning Command Center</small>
+      </span>
+    </a>
+    <nav class="top-actions" aria-label="App actions">
+      <button id="refreshBtn" class="ghost-btn">รีเฟรชข้อมูล</button>
+      <button id="installBtn" class="primary-btn" hidden>ติดตั้งบนมือถือ</button>
+    </nav>
+  </header>
+
+  <main class="app-shell">
+    <section class="hero-panel glass-card">
+      <div class="hero-copy">
+        <p class="eyebrow">Thailand-first • Major world stories only</p>
+        <h1>ข่าวที่ควรรู้ทุกเช้า<br><span>สรุปให้ไว น่าอ่าน และคลิกดูรายละเอียดได้</span></h1>
+        <p id="briefMeta" class="brief-meta">กำลังโหลดข้อมูลข่าว...</p>
+      </div>
+      <div class="hero-score" aria-label="Briefing score">
+        <span id="totalStories">--</span>
+        <small>stories tracked</small>
+      </div>
+    </section>
+
+    <aside class="morning-panel glass-card">
+      <div class="panel-title-row">
+        <h2>Morning Command</h2>
+        <span id="updatedBadge" class="live-badge">LIVE</span>
+      </div>
+      <div id="commandList" class="command-list"></div>
+      <div class="install-card">
+        <strong>ติดตั้งเป็นแอป</strong>
+        <p>เปิดบน Chrome/Safari แล้วกด Add to Home Screen หรือใช้ปุ่มติดตั้งถ้าขึ้น</p>
+      </div>
+    </aside>
+
+    <section class="content-panel">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Top Brief</p>
+          <h2>เรื่องเด่นที่สุดตอนนี้</h2>
+        </div>
+        <div class="search-wrap">
+          <input id="searchInput" type="search" placeholder="ค้นหาข่าว เช่น การเมือง น้ำท่วม หุ้น" />
+        </div>
+      </div>
+
+      <div id="leadGrid" class="lead-grid"></div>
+
+      <div class="filter-strip" id="filterStrip" aria-label="News filters">
+        <button class="filter active" data-filter="all">ทั้งหมด</button>
+        <button class="filter" data-filter="breaking">ด่วน/ดัง</button>
+        <button class="filter" data-filter="thailand">ไทย</button>
+        <button class="filter" data-filter="politics">การเมือง</button>
+        <button class="filter" data-filter="business">เศรษฐกิจ</button>
+        <button class="filter" data-filter="world">ต่างประเทศ</button>
+        <button class="filter" data-filter="tech">เทค</button>
+      </div>
+
+      <div id="newsGrid" class="news-grid"></div>
+      <div id="emptyState" class="empty-state" hidden>ไม่พบข่าวตามตัวกรองนี้</div>
+    </section>
+  </main>
+
+  <dialog id="storyDialog" class="story-dialog">
+    <article class="dialog-card">
+      <button id="closeDialog" class="close-btn" aria-label="ปิด">×</button>
+      <div id="dialogVisual" class="dialog-visual"></div>
+      <div class="dialog-body">
+        <div class="story-meta" id="dialogMeta"></div>
+        <h2 id="dialogTitle"></h2>
+        <p id="dialogSummary" class="dialog-summary"></p>
+        <div class="why-box">
+          <strong>ทำไมควรรู้</strong>
+          <p id="dialogWhy"></p>
+        </div>
+        <div class="dialog-actions">
+          <a id="sourceLink" class="primary-btn" target="_blank" rel="noopener noreferrer">เปิดแหล่งข่าว</a>
+          <button id="copyLinkBtn" class="ghost-btn">คัดลอกลิงก์</button>
+        </div>
+      </div>
+    </article>
+  </dialog>
+
+  <footer class="app-footer">
+    <span>Hermes News reads RSS metadata and links to original publishers.</span>
+    <span>Built for morning decisions, not doom-scrolling.</span>
+  </footer>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "Hermes News Morning Command Center",
+  "short_name": "Hermes News",
+  "description": "Thailand-first dark-mode morning news briefing",
+  "start_url": "https://basssg.github.io/Hermes_News/",
+  "scope": "https://basssg.github.io/Hermes_News/",
+  "display": "standalone",
+  "background_color": "#06101f",
+  "theme_color": "#06101f",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "https://basssg.github.io/Hermes_News/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "https://basssg.github.io/Hermes_News/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
